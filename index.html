@@ -1,0 +1,108 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="apple-mobile-web-app-capable" content="yes"><title>Vocab Boost</title><style>
+*{box-sizing:border-box}body{margin:0;background:#151827;color:#f8f7ff;font:18px system-ui}main{max-width:850px;margin:auto;padding:20px}h1{color:#d6baff}button,input,select,textarea{font:inherit;border-radius:12px;padding:12px;border:1px solid #777}button{background:#7445c7;color:white;border:0;cursor:pointer}button.secondary{background:#34394f}nav,.tools{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}section{background:#23283c;border-radius:18px;padding:20px;margin:16px 0}input,select,textarea{background:#fff;color:#222;max-width:100%}textarea{width:100%}canvas{width:100%;height:190px;background:white;border-radius:12px;touch-action:none}#word{font-size:32px;font-weight:bold}small{color:#c9c5d7} .entry{padding:12px 0;border-bottom:1px solid #51556b}.entry b{color:#d6baff} [hidden]{display:none!important}#preview{max-width:100%;max-height:350px}label{display:block;margin:10px 0} .good{color:#91efac}.bad{color:#ffb3b3}</style></head><body><main><h1>⚡ VOCAB BOOST</h1><small>Klasse 9 · Lernen ohne Zeitdruck</small><nav><button onclick="tab('learn')">Lernen</button><button onclick="tab('words')">Vokabeln</button><button onclick="tab('stats')">Fortschritt / Eltern</button></nav><label>Sprache <select id="lang" onchange="refresh()"><option value="fr">Französisch</option><option value="en">Englisch</option></select></label><label>Lektion <select id="lesson" onchange="renderWords()"></select></label>
+<section id="learn"><button onclick="start()">Mission starten · 5 Wörter</button><div id="exercise" hidden><p id="counter"></p><p id="word"></p><label>Deine Antwort <input id="answer" autocomplete="off" autocapitalize="off" spellcheck="false"></label><small>Apple Pencil: direkt im Antwortfeld mit „Kritzeln“ schreiben oder das freie Schreibfeld verwenden.</small><canvas id="pad" width="900" height="380"></canvas><div class="tools"><button class="secondary" onclick="eraser=false">Stift</button><button class="secondary" onclick="eraser=true">Radierer</button><button class="secondary" onclick="undo()">Rückgängig</button><button class="secondary" onclick="clearPad()">Löschen</button><button class="secondary" onclick="readHand()">Handschrift erkennen</button></div><div class="tools"><button id="checkBtn" onclick="check()">Antwort prüfen</button><button onclick="speak()">🔊 Vorlesen</button><button id="nextBtn" hidden onclick="next()">Weiter</button></div><p id="feedback" aria-live="polite"></p></div></section>
+<section id="words" hidden><h2>Meine Vokabeln</h2><label>Deutsch <input id="de"></label><label>Fremdsprache <input id="foreign"></label><label>Lektion <input id="newLesson" placeholder="Unité 2"></label><button onclick="addWord()">Vokabel speichern</button><h3>📷 Schulbuch importieren</h3><label>Foto aufnehmen <input type="file" accept="image/*" capture="environment" onchange="photo(this)"></label><label>Vorhandenes Bild <input type="file" accept="image/*" onchange="photo(this)"></label><img id="preview" hidden><p><small>Fotografiere die Seite möglichst gerade. Die automatische Erkennung startet nach der Bildauswahl. Prüfe anschließend die Vorschläge. Bei Bedarf kannst du die Spalten manuell einstellen.</small></p><details><summary>Spalten manuell einstellen (optional)</summary><label>Linker Rand <input id="left" type="range" min="0" max="80" value="8"></label><label>Spaltentrennung <input id="middle" type="range" min="10" max="90" value="49"></label><label>Rechter Rand der Übersetzung <input id="right" type="range" min="20" max="100" value="84"></label><label>Oberer Rand <input id="top" type="range" min="0" max="90" value="10"></label><label>Unterer Rand <input id="bottom" type="range" min="10" max="100" value="95"></label><label><input id="reverse" type="checkbox"> Deutsch steht links</label><button onclick="scan()">Mit manuellen Spalten erkennen</button></details><button id="autoScanBtn" onclick="autoScan()">Vokabeln automatisch erkennen</button><p id="scanStatus" aria-live="polite"></p><label>Erkannte Paare kontrollieren (Deutsch = Fremdsprache, eine Zeile je Paar)<textarea id="pairs" rows="8"></textarea></label><button onclick="importPairs()">Geprüfte Vokabeln speichern</button><div id="list"></div></section>
+<section id="stats" hidden><h2>Lernübersicht</h2><div id="report"></div><button onclick="shareReport()">Lernbericht teilen</button><p><small>Die Daten bleiben in diesem Browser. Keine automatische Synchronisierung mit anderen Geräten.</small></p></section></main><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script><script>
+const $=id=>document.getElementById(id);const seed=`die Niederlande|les Pays-Bas
+ der Teil|la partie
+zu etw. gehören, Teil von etw. sein|faire partie de qc
+die Europäische Union (EU)|l’Union européenne (l’UE)
+die Währung|la monnaie
+das Symbol, das Zeichen|le symbole
+die Sprache|la langue
+offiziell|officiel/officielle
+man spricht dort|on y parle
+Niederländisch, die niederländische Sprache|le néerlandais
+von jdm/etw. abhängen|dépendre de qn/qc
+zweisprachig, bilingual|bilingue
+typisch (für etw.)|typique (de qc)
+die Pommes frites|les frites
+#Volet 1
+jdn/etw. entdecken|découvrir qn/qc
+aufstehen|se lever
+sich befinden|se trouver
+sich beeilen|se dépêcher
+etw. erreichen, etw. kriegen, etw. erwischen|avoir qc (+ Verkehrsmittel)
+etw. öffnen, etw. aufschlagen|ouvrir qc
+sich ausruhen|se reposer
+sich hinlegen, schlafen gehen|se coucher
+gegen (zeitlich)|vers
+heißen|s’appeler
+… Minuten benötigen|mettre … minutes
+zu Fuß|à pied
+sich fertig machen, sich vorbereiten|se préparer
+da (kausal)|comme
+trainieren|s’entraîner
+mit (+ Verkehrsmittel)|en (+ Verkehrsmittel)
+das Auto|la voiture
+das Herz|le cœur
+seine Tasche packen/vorbereiten|faire son sac
+baden|se baigner
+#Volet 2
+die Tradition|la tradition
+traditionell|traditionnel/traditionnelle
+stattfinden|avoir lieu
+dort, dorthin|y
+(jdm) etw. anbieten, (jdm) etw. vorschlagen|proposer qc (à qn)
+der Umzug, die Parade|le défilé
+das Feuerwerk|le feu d’artifice
+der/die Leser/in|le lecteur/la lectrice
+sich amüsieren, Spaß haben|s’amuser
+jdm/etw. ähneln|ressembler à qn/qc
+wenn, falls (Bedingung)|si
+jdm etw. schenken, jdm etw. anbieten|offrir qc à qn
+sich verteidigen|se défendre
+der Mut|le courage
+etw. werfen, etw. wegwerfen|jeter qc
+aus (+ Material)|en (+ Material)
+der Schlüssel|la clé
+etw. zerbrechen, etw. kaputt machen|casser qc
+sich (als jdn/etw.) verkleiden|se déguiser (en qn/qc)
+jeder/jede/jedes|chaque`;
+let initial=[],l='Vocabulaire thématique';for(const line of seed.split('\n')){if(line.startsWith('#')){l=line.slice(1);continue}let [de,f]=line.split('|');initial.push({de:de.trim(),f,lang:'fr',lesson:'Unité 1 – '+l})}initial.push(...[['die Schule','l’école','fr'],['das Haus','la maison','fr'],['Entscheidung','decision','en'],['Verantwortung','responsibility','en'],['Umwelt','environment','en'],['die Schule','school','en'],['die Bibliothek','library','en']].map(([de,f,lang])=>({de,f,lang,lesson:'Grundwortschatz'})));
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}let words=load('vbWords',initial),history=load('vbHistory',[]);function save(){localStorage.setItem('vbWords',JSON.stringify(words));localStorage.setItem('vbHistory',JSON.stringify(history))}function tab(id){for(let x of ['learn','words','stats'])$(x).hidden=x!==id;if(id==='stats')stats();if(id==='words')renderWords()}
+function refresh(){let s=$('lesson');s.replaceChildren(new Option('Alle',''));for(let l of [...new Set(words.filter(w=>w.lang===$('lang').value).map(w=>w.lesson))])s.add(new Option(l,l));$('exercise').hidden=true;round=[];renderWords()}function filtered(){return words.filter(w=>w.lang===$('lang').value&&(!$('lesson').value||w.lesson===$('lesson').value))}function renderWords(){let list=$('list');list.replaceChildren();for(let w of filtered()){let div=document.createElement('div');div.className='entry';let a=document.createElement('div'),b=document.createElement('b'),s=document.createElement('small');a.textContent=w.de;b.textContent=w.f;s.textContent=w.lesson;let del=document.createElement('button');del.textContent='Löschen';del.className='secondary';del.onclick=()=>{if(confirm('Vokabel löschen?')){words=words.filter(x=>x!==w);save();refresh()}};div.append(a,b,document.createElement('br'),s,document.createElement('br'),del);list.append(div)}}function insert(de,f){de=de.trim();f=f.trim();if(!de||!f||words.some(w=>w.lang===$('lang').value&&w.de===de&&w.f===f))return false;words.push({de,f,lang:$('lang').value,lesson:$('newLesson').value.trim()||'Eigene Vokabeln'});return true}function addWord(){if(insert($('de').value,$('foreign').value)){save();refresh();$('de').value=$('foreign').value=''}else alert('Bitte beide Wörter eingeben oder Duplikat prüfen.')}function importPairs(){let n=0;for(let line of $('pairs').value.split('\n')){let i=line.indexOf('=');if(i>0&&insert(line.slice(0,i),line.slice(i+1)))n++}save();refresh();$('scanStatus').textContent=n+' neue Vokabeln gespeichert.'}
+let round=[],idx=0,score=0,started=0,checked=false;function start(){round=filtered().map(w=>({w,r:Math.random()})).sort((a,b)=>a.r-b.r).slice(0,5).map(x=>x.w);if(!round.length)return alert('Keine Vokabeln vorhanden.');idx=score=0;started=Date.now();$('exercise').hidden=false;show()}function show(){checked=false;$('counter').textContent=`Frage ${idx+1} von ${round.length}`;$('word').textContent=round[idx].de;$('answer').value='';$('feedback').textContent='';$('checkBtn').disabled=false;$('nextBtn').hidden=true;clearPad()}function norm(s){return s.normalize('NFC').toLowerCase().replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim()}function variants(s){let a=[s,s.replace(/\([^)]*\)/g,'').replace(/\b(?:qn|qc)\b(?:\s*\/\s*(?:qn|qc))?/g,'').trim()];if(!/qn\/qc/.test(s)&&s.includes('/'))a.push(...s.split('/'));return a.map(norm).filter(Boolean)}function check(){if(checked||!round[idx])return;let ans=norm($('answer').value);if(!ans){$('feedback').textContent='Bitte erst eine Antwort eingeben.';return}checked=true;let ok=variants(round[idx].f).includes(ans);if(ok)score++;$('feedback').className=ok?'good':'bad';$('feedback').textContent=ok?'✓ Richtig!':'Richtige Lösung: '+round[idx].f;if(!ok)speak();$('checkBtn').disabled=true;$('nextBtn').hidden=false}function next(){if(!checked)return;if(++idx<round.length)show();else{history.push({date:new Date().toISOString(),lang:round[0].lang,score,total:round.length,seconds:Math.round((Date.now()-started)/1000)});save();$('exercise').hidden=true;alert(`Mission geschafft! ${score} von ${round.length} richtig.`);round=[]}}function speak(){if(!round[idx]||!window.speechSynthesis)return;let u=new SpeechSynthesisUtterance(round[idx].f),lang=round[idx].lang==='fr'?'fr-FR':'en-GB';u.lang=lang;u.rate=.82;let voices=speechSynthesis.getVoices().filter(v=>v.lang===lang);u.voice=voices.find(v=>/Amélie|Audrey|Aurelie|Aurélie|ThomasNEVER|DanielNEVER|Kate|Serena|Martha/i.test(v.name))||voices[0]||null;speechSynthesis.cancel();speechSynthesis.speak(u)}if(window.speechSynthesis)speechSynthesis.getVoices();
+const pad=$('pad'),ctx=pad.getContext('2d');let eraser=false,drawing=false,stack=[];function clearPad(){ctx.fillStyle='white';ctx.fillRect(0,0,pad.width,pad.height);stack=[]}function point(e){let r=pad.getBoundingClientRect();return [(e.clientX-r.left)*pad.width/r.width,(e.clientY-r.top)*pad.height/r.height]}pad.onpointerdown=e=>{stack.push(ctx.getImageData(0,0,pad.width,pad.height));if(stack.length>20)stack.shift();drawing=true;pad.setPointerCapture(e.pointerId);ctx.beginPath();ctx.moveTo(...point(e));ctx.lineTo(...point(e));ctx.strokeStyle=eraser?'white':'#172448';ctx.lineWidth=eraser?35:7;ctx.lineCap='round';ctx.stroke()};pad.onpointermove=e=>{if(drawing){ctx.lineTo(...point(e));ctx.stroke()}};pad.onpointerup=pad.onpointercancel=()=>drawing=false;function undo(){if(stack.length)ctx.putImageData(stack.pop(),0,0)}
+async function readHand(){let f=$('feedback');f.textContent='Handschrift wird erkannt …';let worker;try{worker=await Tesseract.createWorker($('lang').value==='fr'?'fra':'eng');await worker.setParameters({tessedit_pageseg_mode:'7'});let r=await worker.recognize(pad);$('answer').value=r.data.text.trim();f.textContent=$('answer').value?'Erkannt: '+$('answer').value+' – bitte kontrollieren.':'Nicht erkannt. Bitte Kritzeln im Antwortfeld verwenden.'}catch(e){f.textContent='Erkennung nicht verfügbar. Bitte Kritzeln im Antwortfeld verwenden.'}finally{if(worker)await worker.terminate()}}
+let img=new Image(),url;function photo(input){if(!input.files[0])return;if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(input.files[0]);img.onload=()=>autoScan();img.src=url;$('preview').src=url;$('preview').hidden=false}function crop(a,b,t,z){let c=document.createElement('canvas'),w=img.naturalWidth,h=img.naturalHeight;c.width=Math.round(w*(b-a));c.height=Math.round(h*(z-t));c.getContext('2d').drawImage(img,w*a,h*t,c.width,c.height,0,0,c.width,c.height);return c}function lines(data){return (data.lines||[]).map(x=>({text:x.text.trim(),y:(x.bbox.y0+x.bbox.y1)/2,h:x.bbox.y1-x.bbox.y0})).filter(x=>x.text)}function clean(s){return s.replace(/\[[^\]]*\]/g,'').replace(/\s*[►▶].*$/,'').replace(/\s+wird wie.*$/i,'').replace(/\s+(?:m\.|f\.|pl\.|adj\.|inv\.)[\s\w./]*$/,'').trim()}async function scan(){let status=$('scanStatus'),worker;if(!img.complete||!img.naturalWidth)return status.textContent='Bitte zuerst ein Foto auswählen.';let [a,b,c,t,z]=['left','middle','right','top','bottom'].map(id=>Number($(id).value)/100);if(!(a<b&&b<c&&t<z))return status.textContent='Bitte Spaltengrenzen korrigieren.';try{status.textContent='Texterkennung lädt …';let rev=$('reverse').checked,fl=$('lang').value==='fr'?'fra':'eng';worker=await Tesseract.createWorker([fl,'deu'],1,{logger:m=>{status.textContent=m.status+' '+Math.round((m.progress||0)*100)+' %'}});await worker.setParameters({tessedit_pageseg_mode:'6'});let x=lines((await worker.recognize(crop(a,b,t,z))).data),y=lines((await worker.recognize(crop(b,c,t,z))).data);let foreign=rev?y:x,german=rev?x:y;foreign=foreign.filter(v=>!/[•●]|^(je |tu |nous |vous |ils\/elles|Unité|Volet)/i.test(v.text)&&clean(v.text));let pairs=[];for(let i=0;i<foreign.length;i++){let v=foreign[i],prev=foreign[i-1],next=foreign[i+1],lo=prev?(prev.y+v.y)/2:v.y-v.h*1.2,hi=next?(v.y+next.y)/2:v.y+v.h*2.5;let de=clean(german.filter(g=>g.y>=lo&&g.y<hi).map(g=>g.text).join(' ')),f=clean(v.text);if(de&&f)pairs.push(de+' = '+f)}$('pairs').value=pairs.join('\n');status.textContent=pairs.length+' Vorschläge. Bitte Zuordnung und Schreibweise prüfen.'}catch(e){status.textContent='Erkennung fehlgeschlagen: '+e.message+'. Internetverbindung und Foto prüfen.'}finally{if(worker)await worker.terminate()}}
+let autoBusy=false;
+async function autoScan(){
+ const status=$('scanStatus'),button=$('autoScanBtn');
+ if(autoBusy)return;
+ if(!img.complete||!img.naturalWidth){status.textContent='Bitte zuerst ein Foto auswählen.';return;}
+ autoBusy=true;button.disabled=true;let worker;const source=img.src;
+ try{
+ status.textContent='Schulbuch wird analysiert …';
+ const fl=$('lang').value==='fr'?'fra':'eng';
+ worker=await Tesseract.createWorker([fl,'deu'],1,{logger:m=>{status.textContent='Texterkennung: '+m.status+' '+Math.round((m.progress||0)*100)+' %';}});
+ const c=document.createElement('canvas'),scale=Math.min(1,2200/img.naturalWidth);c.width=Math.round(img.naturalWidth*scale);c.height=Math.round(img.naturalHeight*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+ await worker.setParameters({tessedit_pageseg_mode:'11'});
+ const data=(await worker.recognize(c)).data;
+ const raw=(data.lines||[]).flatMap(l=>{
+  const words=(l.words||[]).filter(w=>w.text.trim()).sort((a,b)=>a.bbox.x0-b.bbox.x0);if(!words.length)return [{text:l.text.trim(),...l.bbox}];
+  let groups=[],g=[];for(const w of words){if(g.length&&w.bbox.x0-g.at(-1).bbox.x1>c.width*.035){groups.push(g);g=[];}g.push(w);}if(g.length)groups.push(g);
+  return groups.map(a=>({text:a.map(w=>w.text).join(' '),x0:a[0].bbox.x0,x1:a.at(-1).bbox.x1,y0:Math.min(...a.map(w=>w.bbox.y0)),y1:Math.max(...a.map(w=>w.bbox.y1))}));
+ }).filter(l=>l.text&&l.y1>l.y0);
+ const W=c.width,H=c.height;
+ // Repeated left edges reveal the column starts; use the strongest cluster in each expected region.
+ function peak(min,max,fallback){let best=0,at=fallback;for(let x=min;x<=max;x+=.005){let n=raw.filter(l=>Math.abs(l.x0/W-x)<.025&&l.y0/H>.07&&l.y0/H<.95).length;if(n>best){best=n;at=x;}}return best>=3?at:fallback;}
+ const a=peak(.015,.30,.08),b=peak(.32,.65,.49),d=peak(Math.max(.66,b+.16),.93,.85);
+ $('left').value=Math.max(0,Math.round((a-.045)*100));$('middle').value=Math.round((b-.025)*100);$('right').value=Math.min(100,Math.round((d-.025)*100));
+ const left=raw.filter(l=>l.x0/W>=Math.max(0,a-.08)&&l.x0/W<b-.035&&l.x1/W<b+.025);
+ const right=raw.filter(l=>l.x0/W>=b-.035&&l.x0/W<d-.04&&l.x1/W<d+.025);
+ const skip=t=>/[•●]|\b(?:tu |nous |vous |ils\/elles)|^(?:Unité|Volet|Vocabulaire|je |j[’']|cent-|\d+$)/i.test(t);
+ const rev=$('reverse').checked,foreign=(rev?right:left).filter(l=>!skip(l.text)&&clean(l.text)&&!/^\[/.test(l.text)).sort((a,b)=>a.y0-b.y0),german=(rev?left:right).filter(l=>!skip(l.text)).sort((a,b)=>a.y0-b.y0);
+ const heights=raw.map(l=>l.y1-l.y0).sort((a,b)=>a-b),h=heights[Math.floor(heights.length/2)]||H*.015;
+ let pairs=[],used=new Set();for(let i=0;i<foreign.length;i++){
+ const f=foreign[i],next=foreign[i+1],mid=(f.y0+f.y1)/2;
+ const candidates=german.map((g,j)=>({g,j,dist:Math.abs((g.y0+g.y1)/2-mid)})).filter(o=>!used.has(o.j)&&o.dist<h*1.7).sort((a,b)=>a.dist-b.dist);
+ if(!candidates.length)continue;const first=candidates[0];let parts=[first.g.text];used.add(first.j);
+ for(let j=first.j+1;j<german.length;j++){const g=german[j],prev=german[j-1];if(used.has(j)||g.y0-prev.y1>h*.85||(next&&g.y0>=next.y0-h*.35)||g.y0-f.y0>h*3)break;parts.push(g.text);used.add(j);}
+ let de=clean(parts.join(' ')),word=clean(f.text);if(de&&word&&!pairs.includes(de+' = '+word))pairs.push(de+' = '+word);
+ }
+ if(img.src!==source)return;
+ $('pairs').value=pairs.join('\n');status.textContent=pairs.length?`${pairs.length} Vokabelpaare vorgeschlagen. Bitte alle Zuordnungen prüfen und dann speichern.`:'Keine sicheren Paare gefunden. Bitte Foto gerade aufnehmen oder die manuellen Spalten verwenden.';
+ }catch(e){status.textContent='Automatische Erkennung fehlgeschlagen: '+e.message;}finally{if(worker)await worker.terminate();autoBusy=false;button.disabled=false;}
+}
+function reportText(){let today=new Date().toDateString(),h=history.filter(x=>new Date(x.date).toDateString()===today);return `Heute: ${h.length} Missionen, ${Math.round(h.reduce((a,x)=>a+x.seconds,0)/60)} Minuten, ${h.reduce((a,x)=>a+x.score,0)} von ${h.reduce((a,x)=>a+x.total,0)} richtig.\nLetzte Aktivität: ${history.length?new Date(history.at(-1).date).toLocaleString('de-DE'):'Noch keine'}\n`+history.slice(-10).reverse().map(x=>`${new Date(x.date).toLocaleString('de-DE')} · ${x.lang==='fr'?'Französisch':'Englisch'} · ${x.score}/${x.total}`).join('\n')}function stats(){$('report').textContent=reportText();$('report').style.whiteSpace='pre-wrap'}async function shareReport(){let text=reportText();try{if(navigator.share)await navigator.share({title:'Vocab Boost Lernbericht',text});else{await navigator.clipboard.writeText(text);alert('Bericht kopiert.')}}catch(e){if(e.name!=='AbortError')alert('Teilen nicht verfügbar. Bericht bitte kopieren.')}}refresh();clearPad();</script></body></html>
